@@ -1,0 +1,19 @@
+{
+    "directories": [
+        {
+            "action": "list",
+            "path": "tests/dummy",
+            "include_directories": true
+        },
+        {
+            "action": "analyze",
+            "path": "tests/dummy",
+            "include_directories": true
+        },
+        {
+            "action": "analyze",
+            "path": "tests/dummy",
+            "include_directories": false
+        }
+    ]
+}
