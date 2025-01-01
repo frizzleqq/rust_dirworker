@@ -19,6 +19,7 @@ pub enum DirectoryAction {
     Clean,
     List,
     Analyze,
+    Backup,
 }
 
 pub fn parse_config(config_data: String) -> Config {

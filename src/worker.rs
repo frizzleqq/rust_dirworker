@@ -1,23 +1,30 @@
 use crate::config::{parse_config, DirectoryAction, DirectoryEntry};
+use chrono::Utc;
 use std::fs;
+use std::fs::File;
+use std::io::{BufWriter, Read, Write};
 use std::path::Path;
+use walkdir::WalkDir;
+use zip::write::SimpleFileOptions;
 
 impl DirectoryAction {
-    fn execute(&self, entry: &DirectoryEntry) {
+    fn execute(&self, entry: &DirectoryEntry, timestamp: &str) {
         match self {
             DirectoryAction::List => list_directory(&entry.path, entry.include_directories),
             DirectoryAction::Clean => clean_directory(&entry.path, entry.include_directories),
             DirectoryAction::Analyze => analyze_directory(&entry.path, entry.include_directories),
+            DirectoryAction::Backup => backup_directory(&entry.path, &timestamp), // New action
         }
     }
 }
 
 pub fn run_worker(config_path: &str) {
+    let timestamp = Utc::now().format("%Y%m%d%H%M%S").to_string();
     let config_data = fs::read_to_string(config_path).expect("Failed to read config file");
     let config = parse_config(config_data);
 
     for entry in config.directories {
-        entry.action.execute(&entry);
+        entry.action.execute(&entry, &timestamp);
     }
 }
 
@@ -93,4 +100,44 @@ fn clean_directory(path: &str, include_directories: bool) {
             fs::remove_file(path).expect("Failed to remove file");
         }
     }
+}
+
+fn backup_directory(path: &str, timestamp: &str) {
+    let src_dir = Path::new(path);
+    let dir_name = src_dir.file_name().unwrap().to_str().unwrap();
+    let zip_file_name = format!("C:/Users/Flo/Downloads/{}_{}.zip", dir_name, timestamp);
+    let dst_file = Path::new(&zip_file_name);
+    println!("Creating backup of '{}' -> '{}'", path, zip_file_name);
+
+    let file = File::create(dst_file).expect("Failed to create zip file");
+
+    let writer = BufWriter::new(file);
+    let mut zip = zip::ZipWriter::new(writer);
+    let options = SimpleFileOptions::default()
+        .compression_method(zip::CompressionMethod::Stored)
+        .unix_permissions(0o755);
+
+    for entry in WalkDir::new(src_dir).into_iter().filter_map(|e| e.ok()) {
+        let path = entry.path();
+        let name = path.strip_prefix(src_dir).unwrap();
+        let path_as_string = name.to_str().map(str::to_owned).unwrap();
+        let mut buffer = Vec::new();
+
+        if path.is_file() {
+            println!("Adding file {}", path.display());
+            zip.start_file(path_as_string, options).unwrap();
+            let mut f = File::open(path).expect("Failed to open file");
+
+            f.read_to_end(&mut buffer).expect("Failed to read file");
+            zip.write_all(&buffer).unwrap();
+            buffer.clear();
+        } else if !name.as_os_str().is_empty() {
+            println!("Adding dir {}", path.display());
+            zip.add_directory(path_as_string, options).unwrap();
+        }
+    }
+
+    zip.finish().unwrap();
+    println!("Backup created: '{}'", zip_file_name);
+    println!();
 }
