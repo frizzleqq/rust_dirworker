@@ -18,7 +18,7 @@ Supported actions:
 
 Usage:
 ```shell
-dirworker tests/config.json
+dirworker example/config.json
 ```
 
 Config example:
@@ -27,25 +27,25 @@ Config example:
     "directories": [
         {
             "action": "list",
-            "path": "tests/dummy",
+            "path": "example/dummy",
             "include_directories": true
         },
         {
             "action": "analyze",
-            "path": "tests/dummy",
+            "path": "example/dummy",
             "include_directories": true
         },
         {
             "action": "analyze",
-            "path": "tests/dummy",
+            "path": "example/dummy",
             "include_directories": false
         },
         {
             "action": "backup",
-            "path": "tests/dummy"
+            "path": "example/dummy"
         }
     ],
-    "backup_root_path": "tests/backup"
+    "backup_root_path": "example/backup"
 }
 ```
 
