@@ -140,4 +140,23 @@ mod tests {
 
         parse_config(json_data.to_string());
     }
+
+    #[test]
+    fn test_parse_config_without_optional_backup() {
+        let json_data = r#"
+        {
+            "directories": [
+                {
+                    "path": "/path/to/dir",
+                    "action": "backup"
+                }
+            ]
+        }
+        "#;
+
+        let config = parse_config(json_data.to_string());
+
+        assert_eq!(config.directories.len(), 1);
+        assert_eq!(config.backup_root_path, None);
+    }
 }
