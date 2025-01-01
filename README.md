@@ -14,6 +14,8 @@ Supported actions:
 * `clean`: delete content of directory
   * optionally with subdirectories if `include_directories` is true
 
+Note that actions are performed in alphabetical order on paths, so 'backup' is performed before 'clean'.
+
 ## Usage
 
 Usage:
