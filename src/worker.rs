@@ -29,10 +29,14 @@ pub fn run_worker(config_path: &str) {
     let config_data = fs::read_to_string(config_path).expect("Failed to read config file");
     let config = parse_config(config_data);
 
-    for entry in config.directories {
+    // sort directory entry  by path and action (so backup is always before clean)
+    let mut sorted_entries: Vec<_> = config.directories.iter().collect();
+    sorted_entries.sort_by(|a, b| a.path.cmp(&b.path).then(a.action.cmp(&b.action)));
+
+    for entry in sorted_entries {
         entry
             .action
-            .execute(&entry, &timestamp, config.backup_root_path.as_deref());
+            .execute(entry, &timestamp, config.backup_root_path.as_deref());
     }
 }
 
@@ -75,6 +79,10 @@ fn analyze_directory_recursive(path: &Path, include_directories: Option<bool>) -
 }
 
 fn list_directory(path: &str, include_directories: bool) {
+    println!(
+        "Listing directory (subdirs={}): '{}'",
+        include_directories, path
+    );
     let dir_entries = fs::read_dir(path).expect("Failed to read directory");
 
     for entry in dir_entries {
@@ -88,9 +96,14 @@ fn list_directory(path: &str, include_directories: bool) {
             println!("File: '{}'", path.display());
         }
     }
+    println!();
 }
 
 fn clean_directory(path: &str, include_directories: bool) {
+    println!(
+        "Cleaning directory (subdirs={}): '{}'",
+        include_directories, path
+    );
     let dir_entries = fs::read_dir(path).expect("Failed to read directory");
 
     for entry in dir_entries {
@@ -108,6 +121,7 @@ fn clean_directory(path: &str, include_directories: bool) {
             fs::remove_file(path).expect("Failed to remove file");
         }
     }
+    println!()
 }
 
 fn backup_directory(path: &str, timestamp: &str, backup_root_path: &str) {
@@ -121,9 +135,7 @@ fn backup_directory(path: &str, timestamp: &str, backup_root_path: &str) {
 
     let writer = BufWriter::new(file);
     let mut zip = zip::ZipWriter::new(writer);
-    let options = SimpleFileOptions::default()
-        .compression_method(zip::CompressionMethod::Stored)
-        .unix_permissions(0o755);
+    let options = SimpleFileOptions::default().compression_method(zip::CompressionMethod::Stored);
 
     for entry in WalkDir::new(src_dir).into_iter().filter_map(|e| e.ok()) {
         let path = entry.path();
