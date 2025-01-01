@@ -137,10 +137,11 @@ fn backup_directory(path: &str, timestamp: &str, backup_root_path: &str) {
     let mut zip = zip::ZipWriter::new(writer);
     let options = SimpleFileOptions::default().compression_method(zip::CompressionMethod::Stored);
 
-    for entry in WalkDir::new(src_dir).into_iter().filter_map(|e| e.ok()) {
+    for entry in WalkDir::new(&src_dir).into_iter().filter_map(|e| e.ok()) {
         let path = entry.path();
-        let name = path.strip_prefix(src_dir).unwrap();
-        let path_as_string = name.to_str().map(str::to_owned).unwrap();
+        let name = path.strip_prefix(&src_dir).unwrap();
+        // When using windows sep, not all tools can deal with the subdirs
+        let path_as_string = name.to_str().unwrap().replace("\\", "/");
         let mut buffer = Vec::new();
 
         if path.is_file() {
