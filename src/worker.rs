@@ -188,7 +188,7 @@ mod tests {
     #[test]
     fn test_backup_directory() {
         let temp_dir = tempdir().unwrap();
-        let test_dir = temp_dir.path().join("dummy");
+        let test_dir = temp_dir.path().join("content");
         let backup_root_path = temp_dir.path().join("backup");
         let timestamp = "20250101121500";
 
@@ -200,7 +200,7 @@ mod tests {
             backup_root_path.to_str().unwrap(),
         );
 
-        let zip_file_name = backup_root_path.join(format!("dummy_{}.zip", timestamp));
+        let zip_file_name = backup_root_path.join(format!("content_{}.zip", timestamp));
         assert!(zip_file_name.exists(), "Backup zip file was not created");
 
         let file = File::open(&zip_file_name).expect("Failed to open zip file");
@@ -219,5 +219,18 @@ mod tests {
             .read_to_string(&mut file2_content)
             .expect("Failed to read file2.txt");
         assert_eq!(file2_content, "Hello, subdir!");
+    }
+
+    #[test]
+    fn test_clean_directory() {
+        let temp_dir = tempdir().unwrap();
+        let test_dir = temp_dir.path().join("content");
+
+        create_test_files(&test_dir);
+
+        clean_directory(test_dir.to_str().unwrap(), true);
+
+        let entries: Vec<_> = fs::read_dir(&test_dir).unwrap().collect();
+        assert!(entries.is_empty(), "Directory is not empty after cleaning");
     }
 }
