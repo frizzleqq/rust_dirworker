@@ -19,5 +19,6 @@
             "action": "backup",
             "path": "tests/dummy"
         }
-    ]
+    ],
+    "backup_root_path": "tests/backup"
 }

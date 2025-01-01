@@ -3,6 +3,7 @@ use serde::Deserialize;
 #[derive(Deserialize)]
 pub struct Config {
     pub directories: Vec<DirectoryEntry>,
+    pub backup_root_path: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -45,13 +46,15 @@ mod tests {
                     "include_directories": false,
                     "action": "clean"
                 }
-            ]
+            ],
+            "backup_root_path": "/backup"
         }
         "#;
 
         let config = parse_config(json_data.to_string());
 
         assert_eq!(config.directories.len(), 2);
+        assert_eq!(config.backup_root_path, Some("/backup".to_string()));
 
         let dir1 = &config.directories[0];
         assert_eq!(dir1.path, "/path/to/dir1");

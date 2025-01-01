@@ -8,12 +8,18 @@ use walkdir::WalkDir;
 use zip::write::SimpleFileOptions;
 
 impl DirectoryAction {
-    fn execute(&self, entry: &DirectoryEntry, timestamp: &str) {
+    fn execute(&self, entry: &DirectoryEntry, timestamp: &str, backup_root_path: Option<&str>) {
         match self {
             DirectoryAction::List => list_directory(&entry.path, entry.include_directories),
             DirectoryAction::Clean => clean_directory(&entry.path, entry.include_directories),
             DirectoryAction::Analyze => analyze_directory(&entry.path, entry.include_directories),
-            DirectoryAction::Backup => backup_directory(&entry.path, &timestamp), // New action
+            DirectoryAction::Backup => {
+                if let Some(backup_root_path) = backup_root_path {
+                    backup_directory(&entry.path, timestamp, backup_root_path);
+                } else {
+                    panic!("Backup requires 'backup_root_path' in config.");
+                }
+            }
         }
     }
 }
@@ -24,7 +30,9 @@ pub fn run_worker(config_path: &str) {
     let config = parse_config(config_data);
 
     for entry in config.directories {
-        entry.action.execute(&entry, &timestamp);
+        entry
+            .action
+            .execute(&entry, &timestamp, config.backup_root_path.as_deref());
     }
 }
 
@@ -102,14 +110,14 @@ fn clean_directory(path: &str, include_directories: bool) {
     }
 }
 
-fn backup_directory(path: &str, timestamp: &str) {
+fn backup_directory(path: &str, timestamp: &str, backup_root_path: &str) {
     let src_dir = Path::new(path);
     let dir_name = src_dir.file_name().unwrap().to_str().unwrap();
-    let zip_file_name = format!("C:/Users/Flo/Downloads/{}_{}.zip", dir_name, timestamp);
-    let dst_file = Path::new(&zip_file_name);
+    let zip_file_name = format!("{}/{}_{}.zip", backup_root_path, dir_name, timestamp);
     println!("Creating backup of '{}' -> '{}'", path, zip_file_name);
 
-    let file = File::create(dst_file).expect("Failed to create zip file");
+    fs::create_dir_all(backup_root_path).expect("Failed to create backup root directory");
+    let file = File::create(&zip_file_name).expect("Failed to create zip file");
 
     let writer = BufWriter::new(file);
     let mut zip = zip::ZipWriter::new(writer);
