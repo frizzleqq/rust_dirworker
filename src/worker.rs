@@ -162,3 +162,62 @@ fn backup_directory(path: &str, timestamp: &str, backup_root_path: &str) {
     println!("Backup created: '{}'", zip_file_name);
     println!();
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs::{self, File};
+    use std::io::{Read, Write};
+    use std::path::Path;
+    use tempfile::tempdir;
+    use zip::read::ZipArchive;
+
+    fn create_test_files(test_dir: &Path) {
+        let sub_dir = test_dir.join("subdir");
+        let file1 = test_dir.join("file1.txt");
+        let file2 = sub_dir.join("file2.txt");
+
+        fs::create_dir_all(&sub_dir).unwrap();
+        let mut f1 = File::create(file1).unwrap();
+        let mut f2 = File::create(file2).unwrap();
+
+        f1.write_all(b"Hello, world!").unwrap();
+        f2.write_all(b"Hello, subdir!").unwrap();
+    }
+
+    #[test]
+    fn test_backup_directory() {
+        let temp_dir = tempdir().unwrap();
+        let test_dir = temp_dir.path().join("dummy");
+        let backup_root_path = temp_dir.path().join("backup");
+        let timestamp = "20250101121500";
+
+        create_test_files(&test_dir);
+
+        backup_directory(
+            test_dir.to_str().unwrap(),
+            timestamp,
+            backup_root_path.to_str().unwrap(),
+        );
+
+        let zip_file_name = backup_root_path.join(format!("dummy_{}.zip", timestamp));
+        assert!(zip_file_name.exists(), "Backup zip file was not created");
+
+        let file = File::open(&zip_file_name).expect("Failed to open zip file");
+        let mut zip = ZipArchive::new(file).expect("Failed to read zip archive");
+
+        let mut file1_content = String::new();
+        zip.by_name("file1.txt")
+            .expect("file1.txt not found in zip")
+            .read_to_string(&mut file1_content)
+            .expect("Failed to read file1.txt");
+        assert_eq!(file1_content, "Hello, world!");
+
+        let mut file2_content = String::new();
+        zip.by_name("subdir/file2.txt")
+            .expect("subdir/file2.txt not found in zip")
+            .read_to_string(&mut file2_content)
+            .expect("Failed to read file2.txt");
+        assert_eq!(file2_content, "Hello, subdir!");
+    }
+}
