@@ -201,7 +201,7 @@ mod tests {
         );
 
         let zip_file_name = backup_root_path.join(format!("content_{}.zip", timestamp));
-        assert!(zip_file_name.exists(), "Backup zip file was not created");
+        assert!(zip_file_name.exists(), "zip file was not created");
 
         let file = File::open(&zip_file_name).expect("Failed to open zip file");
         let mut zip = ZipArchive::new(file).expect("Failed to read zip archive");
@@ -222,7 +222,33 @@ mod tests {
     }
 
     #[test]
-    fn test_clean_directory() {
+    fn test_clean_directory_without_directories() {
+        let temp_dir = tempdir().unwrap();
+        let test_dir = temp_dir.path().join("content");
+
+        create_test_files(&test_dir);
+
+        clean_directory(test_dir.to_str().unwrap(), false);
+
+        let entries: Vec<_> = fs::read_dir(&test_dir).unwrap().collect();
+        assert_eq!(
+            entries.len(),
+            1,
+            "root directory should contain only 'subdir'"
+        );
+        assert!(
+            entries[0].as_ref().unwrap().path().is_dir(),
+            "only subdir allowed"
+        );
+
+        let subdir_entries: Vec<_> = fs::read_dir(&entries[0].as_ref().unwrap().path())
+            .unwrap()
+            .collect();
+        assert!(!subdir_entries.is_empty(), "subdir should still have files");
+    }
+
+    #[test]
+    fn test_clean_directory_with_directories() {
         let temp_dir = tempdir().unwrap();
         let test_dir = temp_dir.path().join("content");
 
@@ -231,6 +257,6 @@ mod tests {
         clean_directory(test_dir.to_str().unwrap(), true);
 
         let entries: Vec<_> = fs::read_dir(&test_dir).unwrap().collect();
-        assert!(entries.is_empty(), "Directory is not empty after cleaning");
+        assert!(entries.is_empty(), "directory should be empty");
     }
 }
